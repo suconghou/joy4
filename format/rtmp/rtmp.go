@@ -322,7 +322,7 @@ func getTcUrl(u *url.URL) string {
 	app, _ := SplitPath(u)
 	nu := *u
 	nu.Path = "/" + app
-	return nu.String()
+    return strings.SplitN(nu.String(), "?", 2)[0]
 }
 
 func createURL(tcurl, app, play string) (u *url.URL) {
@@ -697,7 +697,7 @@ func (self *Conn) connectPublish() (err error) {
 	if Debug {
 		fmt.Printf("rtmp: > publish('%s')\n", publishpath)
 	}
-	if err = self.writeCommandMsg(8, self.avmsgsid, "publish", transid, nil, publishpath); err != nil {
+	if err = self.writeCommandMsg(8, self.avmsgsid, "publish", transid, nil, publishpath, connectpath); err != nil {
 		return
 	}
 	transid++
