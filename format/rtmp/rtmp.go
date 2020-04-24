@@ -8,16 +8,17 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"github.com/nareix/joy4/utils/bits/pio"
-	"github.com/nareix/joy4/av"
-	"github.com/nareix/joy4/av/avutil"
-	"github.com/nareix/joy4/format/flv"
-	"github.com/nareix/joy4/format/flv/flvio"
 	"io"
 	"net"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/nareix/joy4/av"
+	"github.com/nareix/joy4/av/avutil"
+	"github.com/nareix/joy4/format/flv"
+	"github.com/nareix/joy4/format/flv/flvio"
+	"github.com/nareix/joy4/utils/bits/pio"
 )
 
 var Debug bool
@@ -322,7 +323,7 @@ func getTcUrl(u *url.URL) string {
 	app, _ := SplitPath(u)
 	nu := *u
 	nu.Path = "/" + app
-    return strings.SplitN(nu.String(), "?", 2)[0]
+	return strings.SplitN(nu.String(), "?", 2)[0]
 }
 
 func createURL(tcurl, app, play string) (u *url.URL) {
@@ -577,6 +578,17 @@ func (self *Conn) checkCreateStreamResult() (ok bool, avmsgsid uint32) {
 	return
 }
 
+func (self *Conn) checkStatusStreamResult() error {
+	if len(self.commandparams) < 1 {
+		return fmt.Errorf("error onStatus resp")
+	}
+	v := self.commandparams[0].(flvio.AMFMap)
+	if v["code"] == "NetStream.Publish.Start" {
+		return nil
+	}
+	return fmt.Errorf("%s", v)
+}
+
 func (self *Conn) probe() (err error) {
 	for !self.prober.Probed() {
 		var tag flvio.Tag
@@ -704,6 +716,21 @@ func (self *Conn) connectPublish() (err error) {
 
 	if err = self.flushWrite(); err != nil {
 		return
+	}
+
+	for {
+		if err = self.pollMsg(); err != nil {
+			return
+		}
+		if self.gotcommand {
+			// NetStream.Publish.Start
+			if self.commandname == "onStatus" {
+				if err = self.checkStatusStreamResult(); err != nil {
+					return err
+				}
+				break
+			}
+		}
 	}
 
 	self.writing = true
