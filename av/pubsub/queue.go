@@ -2,11 +2,12 @@
 package pubsub
 
 import (
-	"github.com/nareix/joy4/av"
-	"github.com/nareix/joy4/av/pktque"
 	"io"
 	"sync"
 	"time"
+
+	"github.com/nareix/joy4/av"
+	"github.com/nareix/joy4/av/pktque"
 )
 
 //        time
@@ -104,7 +105,6 @@ func (self *Queue) WritePacket(pkt av.Packet) (err error) {
 	self.lock.Unlock()
 	return
 }
-
 
 // GetVideoIdx returns the internal index of the video stream
 func (self *Queue) GetVideoIdx() (idx int8) {

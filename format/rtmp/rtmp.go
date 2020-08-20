@@ -180,7 +180,8 @@ type Conn struct {
 	datamsgvals []interface{}
 	avtag       flvio.Tag
 
-	eventtype uint16
+	eventtype  uint16
+	msgTimeout int
 }
 
 type txrxcount struct {
@@ -213,6 +214,7 @@ func NewConn(netconn net.Conn) *Conn {
 	conn.txrxcount = &txrxcount{ReadWriter: netconn}
 	conn.writebuf = make([]byte, 4096)
 	conn.readbuf = make([]byte, 4096)
+	conn.msgTimeout = 5 //默认5秒
 	return conn
 }
 
@@ -257,6 +259,10 @@ func (self *Conn) NetConn() net.Conn {
 	return self.netconn
 }
 
+func (self *Conn) SetMsgTimeout(timeout int) {
+	self.msgTimeout = timeout
+}
+
 func (self *Conn) TxBytes() uint64 {
 	return self.txrxcount.txbytes
 }
@@ -298,6 +304,8 @@ func (self *Conn) pollMsg() (err error) {
 	self.gotcommand = false
 	self.datamsgvals = nil
 	self.avtag = flvio.Tag{}
+	self.netconn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(self.msgTimeout)))
+	defer self.netconn.SetReadDeadline(time.Time{})
 	for {
 		if err = self.readChunk(); err != nil {
 			return
@@ -354,7 +362,7 @@ var CodecTypes = flv.CodecTypes
 
 func (self *Conn) writeBasicConf() (err error) {
 	// > SetChunkSize
-	if err = self.writeSetChunkSize(1024 * 1024 * 128); err != nil {
+	if err = self.writeSetChunkSize(1024 * 1024 * 10); err != nil {
 		return
 	}
 	// > WindowAckSize
