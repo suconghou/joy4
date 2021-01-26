@@ -304,9 +304,9 @@ func (self *Conn) pollMsg() (err error) {
 	self.gotcommand = false
 	self.datamsgvals = nil
 	self.avtag = flvio.Tag{}
-	self.netconn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(self.msgTimeout)))
 	defer self.netconn.SetReadDeadline(time.Time{})
 	for {
+		self.netconn.SetReadDeadline(time.Now().Add(time.Second * time.Duration(self.msgTimeout)))
 		if err = self.readChunk(); err != nil {
 			return
 		}
