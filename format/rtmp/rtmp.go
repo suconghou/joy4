@@ -664,7 +664,7 @@ func (self *Conn) writeConnect(path string) (err error) {
 				if len(self.msgdata) == 4 {
 					self.readAckSize = pio.U32BE(self.msgdata)
 				}
-				if err = self.writeWindowAckSize(0xffffffff); err != nil {
+				if err = self.writeWindowAckSize(5000000); err != nil {
 					return
 				}
 			}
