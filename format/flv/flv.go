@@ -354,21 +354,7 @@ func (self *Muxer) WriteHeader(streams []av.CodecData) (err error) {
 		return
 	}
 
-	for _, stream := range streams {
-		var tag flvio.Tag
-		var ok bool
-		if tag, ok, err = CodecDataToTag(stream); err != nil {
-			return
-		}
-		if ok {
-			if err = flvio.WriteTag(self.bufw, tag, 0, self.b); err != nil {
-				return
-			}
-		}
-	}
-
-	self.streams = streams
-	return
+	return self.WriteMeta(streams)
 }
 
 func (self *Muxer) WriteMeta(streams []av.CodecData) (err error) {

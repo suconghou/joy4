@@ -944,20 +944,7 @@ func (self *Conn) WriteHeader(streams []av.CodecData) (err error) {
 
 	// > Videodata(decoder config)
 	// > Audiodata(decoder config)
-	for _, stream := range streams {
-		var ok bool
-		var tag flvio.Tag
-		if tag, ok, err = flv.CodecDataToTag(stream); err != nil {
-			return
-		}
-		if ok {
-			if err = self.writeAVTag(tag, 0); err != nil {
-				return
-			}
-		}
-	}
-
-	self.streams = streams
+	err = self.WriteMeta(streams)
 	self.stage++
 	return
 }
