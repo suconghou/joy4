@@ -16,6 +16,7 @@ import (
 
 	"github.com/nareix/joy4/av"
 	"github.com/nareix/joy4/av/avutil"
+	"github.com/nareix/joy4/codec/h264parser"
 	"github.com/nareix/joy4/format/flv"
 	"github.com/nareix/joy4/format/flv/flvio"
 	"github.com/nareix/joy4/utils/bits/pio"
@@ -138,6 +139,7 @@ const (
 type Conn struct {
 	URL             *url.URL
 	OnPlayOrPublish func(string, flvio.AMFMap) error
+	MetaVersion     int
 
 	prober  *flv.Prober
 	streams []av.CodecData
@@ -294,6 +296,18 @@ func (self *Conn) pollAVTag() (tag flvio.Tag, err error) {
 		switch self.msgtypeid {
 		case msgtypeidVideoMsg, msgtypeidAudioMsg:
 			tag = self.avtag
+			// 修复webrtc推流中分辨率动态调整,导致的分发出去的rtmp流花屏问题
+			if tag.FrameType == flvio.FRAME_KEY && tag.CodecID == flvio.VIDEO_H264 && tag.AVCPacketType == flvio.AVC_SEQHDR {
+				s, err := h264parser.NewCodecDataFromAVCDecoderConfRecord(tag.Data)
+				if err == nil {
+					for i, ss := range self.streams {
+						if ss.Type().IsVideo() {
+							self.streams[i] = s
+							self.MetaVersion++
+						}
+					}
+				}
+			}
 			return
 		}
 	}
@@ -945,6 +959,24 @@ func (self *Conn) WriteHeader(streams []av.CodecData) (err error) {
 
 	self.streams = streams
 	self.stage++
+	return
+}
+
+// WriteHeader 调用之后,分辨率等数据发生变化,可调用此方法
+func (self *Conn) WriteMeta(streams []av.CodecData) (err error) {
+	for _, stream := range streams {
+		var ok bool
+		var tag flvio.Tag
+		if tag, ok, err = flv.CodecDataToTag(stream); err != nil {
+			return
+		}
+		if ok {
+			if err = self.writeAVTag(tag, 0); err != nil {
+				return
+			}
+		}
+	}
+	self.streams = streams
 	return
 }
 
